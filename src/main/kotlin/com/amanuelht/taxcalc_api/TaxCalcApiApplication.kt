@@ -7,5 +7,5 @@ import org.springframework.boot.runApplication
 class TaxCalcApiApplication
 
 fun main(args: Array<String>) {
-	runApplication<TaxCalcApiApplication>(*args)
+    runApplication<TaxCalcApiApplication>(*args)
 }
