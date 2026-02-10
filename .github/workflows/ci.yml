@@ -73,3 +73,4 @@ jobs:
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           IMAGE=ghcr.io/$OWNER/taxcalc-api:latest
           docker push $IMAGE
+#---
