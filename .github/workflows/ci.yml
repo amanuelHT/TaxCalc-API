@@ -1,52 +1,70 @@
-name: CI Pipeline
+name: TaxCalc API – CI/CD Pipeline
 
 on:
   push:
     branches: ["main"]
   pull_request:
-    branches: ["main"]
 
 jobs:
-  build-test:
+
+  build_and_test:
     name: Build & Test Kotlin API
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: 17
 
-      - name: Give permission to Gradlew
+      - name: Make Gradle executable
         run: chmod +x gradlew
 
-      - name: Run Tests
-        run: ./gradlew clean test --info
+      - name: Test API
+        run: ./gradlew clean test
 
-      - name: Build JAR (without tests)
-        run: ./gradlew bootJar -x test
 
-  docker-build:
+  docker_build:
     name: Build Docker Image
+    needs: build_and_test
     runs-on: ubuntu-latest
-    needs: build-test
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - name: Build Docker Image
-        run: |
-          docker build -t taxcalc-api:latest .
+        run: docker build -t taxcalc-api:latest .
 
       - name: Verify image
-        run: docker run --rm taxcalc-api:latest java -version 
-        #run: docker run --rm taxcalc-api:latest --help || echo "Image built successfully"
+        run: docker run --rm taxcalc-api:latest java -version
 
+
+  publish_image:
+    name: Publish Image to GHCR
+    needs: docker_build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build & Tag Image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/taxcalc-api:latest
+          docker build -t $IMAGE_NAME .
+
+      - name: Push Image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/taxcalc-api:latest
+          docker push $IMAGE_NAME
